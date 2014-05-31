@@ -64,6 +64,7 @@ executable timedcat
   build-depends:       base >=4.6 && <4.8
                      , pipes == 4.1.*
                      , cmdargs == 0.10.*
+                     , async == 2.0.*
 
   -- Directories containing source files.
   -- hs-source-dirs:

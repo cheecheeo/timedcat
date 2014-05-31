@@ -3,6 +3,8 @@ import Data.Data (Data)
 import Data.Typeable (Typeable)
 import qualified System.IO as IO
 
+import qualified Control.Concurrent as C
+import qualified Control.Concurrent.Async as A
 import qualified Pipes as P
 import Pipes ((>->), MonadIO, Consumer', Producer')
 import qualified Pipes.Prelude as PP
@@ -19,23 +21,26 @@ argsSpec = Args {
                       &= CmdArgs.typFile
                       &= CmdArgs.help "write to FILE",
           seconds   =    CmdArgs.def
-                      &= CmdArgs.typ "SECONDS"
+                      &= CmdArgs.typ "MILLISECONDS"
                       &= CmdArgs.help "number of seconds to wait before consuming input"
-         } &= CmdArgs.summary "Output STDIN to a file after every N seconds of no output."
+         } &= CmdArgs.summary "Output STDIN to a file after every N milliseconds of no output."
 
--- TODO catch eof somewhere in here
 racedGetLines :: Int -> IO [String]
 racedGetLines n = go []
   where go acc = do
-          input <- IO.hWaitForInput IO.stdin n
-          if input
-            then do
-              line <- getLine -- check if EOF here and return if so
-              go (acc ++ [line])
-            else
-              return acc
+          input <- racedGetLine n
+          maybe
+            (return acc)
+            (\line -> go (acc ++ [line]))
+            input
+
+-- TODO catch eof somewhere in here
+-- racedGetLine :: Int -> IO (Either IOError String)
+racedGetLine :: Int -> IO (Maybe String)
+racedGetLine n = either (const (return Nothing)) (return . Just) =<< (A.race (C.threadDelay n) getLine)
 
 chunkedLines :: Int -> Producer' [String] IO r
+--chunkedLines n = PP.repeatM (racedGetLines n) >-> PP.filter (not . null)
 chunkedLines n = PP.repeatM (racedGetLines n) >-> PP.filter (not . null)
 
 pPwriteFile :: (MonadIO m) => FilePath -> Consumer' String m r
@@ -46,7 +51,7 @@ writeChunkedLines n filename = P.runEffect $ chunkedLines (n * 1000) >-> PP.map 
   where writePipe =
           case filename of
             "" -> error "Need an output filename" -- temporary file
-            "-" -> chomp >-> PP.stdoutLn
+            "-" -> (PP.take 1 >> return ()) >-> chomp >-> PP.stdoutLn
             fname -> pPwriteFile fname
         chomp = PP.map init
 
