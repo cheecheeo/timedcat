@@ -5,7 +5,3 @@ at first just collect the output and then write it to a file
 next run an arbitrary command over the output (avoid the need of entr or when-changed)
 
 output for less than 3 seconds then ^D and it breaks :-/
-
-Examples:
-  chain with entr
-  while true loop

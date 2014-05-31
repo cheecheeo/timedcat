@@ -16,7 +16,7 @@ version:             0.1.0.0
 synopsis:            Output STDIN to a file after every N seconds of no output.
 
 -- A longer description of the package.
--- description:
+description:         Feed in lines on standard input and `timedcat` will output the input consumed so far to the provided file, STDOUT, or a temporary file.
 
 -- URL for the project homepage or repository.
 homepage:            https://github.com/cheecheeo/timedcat
